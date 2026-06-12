@@ -108,12 +108,13 @@ function BuscaPage() {
           throw new Error("Formato de produtos invalido");
         }
 
-        const respostas = Object.entries(dadosPorCategoria).flatMap(
+        const todos = Object.entries(dadosPorCategoria).flatMap(
           ([slug, itens]) => {
             if (!Array.isArray(itens)) return [];
 
             return itens.map((produto, index) => ({
               ...produto,
+              _originalId: String(produto.id ?? index),
               id: `${slug}-${produto.id ?? index}`,
               slug,
               codigosBusca: montarCodigos(produto),
@@ -121,8 +122,17 @@ function BuscaPage() {
           },
         );
 
+        // Deduplica: prefere versão da categoria real em vez de promoções
+        const vistos = new Map();
+        for (const produto of todos) {
+          const chave = produto._originalId;
+          if (!vistos.has(chave) || vistos.get(chave).slug === "promoçoes") {
+            vistos.set(chave, produto);
+          }
+        }
+
         if (!cancelado) {
-          setTodosProdutos(respostas);
+          setTodosProdutos(Array.from(vistos.values()));
         }
       } catch {
         if (!cancelado) {
